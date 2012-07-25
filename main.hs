@@ -1,5 +1,6 @@
 import Data.List
 import Data.List.Split
+import Data.Map
 import Network
 import System.IO
 import System.Exit
@@ -11,6 +12,11 @@ import Text.Printf
 import Prelude hiding (catch)
 
 import Message
+
+botCommands = fromList
+    [ ( "quit", write "QUIT" ":Exiting" >> io (exitWith ExitSuccess)    )
+    --, ( "echo", privmsg (drop 5 x)                                      )
+    , ( "fall", privmsg "\1ACTION falls over.\1"                        ) ]
 
 server = "irc.canternet.org"
 port   = 6667
@@ -56,7 +62,8 @@ listen h = forever $ do
     let m = parseMessage s
     if ping s then pong s
     else if isConnected $ command m then joinChannel    -- Wait for MOTD before joining
-    else eval (clean s)
+    else if shouldEval (clean s) then eval $ drop 1 $ dropWhile (/= ' ') (clean s)
+    else return ()
   where
     forever a   = a >> forever a
     clean       = drop 1 . dropWhile(/= ':') . drop 1
@@ -64,12 +71,16 @@ listen h = forever $ do
     pong x      = write "PONG" (':' : drop 6 x)
     isConnected = (==) $ CommandNum 1
     joinChannel = write "JOIN" chan
+    shouldEval  = isPrefixOf ("!"++nick++" ")
 
 -- Dispatch a command
 eval :: String -> Net ()
-eval     "!quit"                 = write "QUIT" ":Exiting" >> io (exitWith ExitSuccess)
-eval x | "!echo " `isPrefixOf` x = privmsg (drop 4 x)
-eval _                           = return ()
+eval s =
+    case Data.Map.member s botCommands of
+        True  -> case Data.Map.lookup s botCommands of
+                    Just x  -> x
+                    Nothing -> return ()
+        False -> return ()
 
 -- Send a privmsg to the server we're currently connected to
 privmsg :: String -> Net ()
