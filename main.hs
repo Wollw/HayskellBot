@@ -14,9 +14,9 @@ import Prelude hiding (catch)
 import Message
 
 botCommands = fromList
-    [ ( "quit", write "QUIT" ":Exiting" >> io (exitWith ExitSuccess)    )
-    --, ( "echo", privmsg (drop 5 x)                                      )
-    , ( "fall", privmsg "\1ACTION falls over.\1"                        ) ]
+    [ ( "quit", \_ -> write "QUIT" ":Exiting" >> io (exitWith ExitSuccess))
+    , ( "echo", \x -> privmsg $ drop 5 x                               )
+    , ( "fall", \_ -> privmsg "\1ACTION falls over.\1"                        ) ]
 
 server = "irc.canternet.org"
 port   = 6667
@@ -76,11 +76,9 @@ listen h = forever $ do
 -- Dispatch a command
 eval :: String -> Net ()
 eval s =
-    case Data.Map.member s botCommands of
-        True  -> case Data.Map.lookup s botCommands of
-                    Just x  -> x
-                    Nothing -> return ()
-        False -> return ()
+    case Data.Map.lookup (takeWhile (/= ' ') s) botCommands of
+        Just x  -> x s
+        Nothing -> return ()
 
 -- Send a privmsg to the server we're currently connected to
 privmsg :: String -> Net ()
