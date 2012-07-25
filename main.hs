@@ -16,6 +16,9 @@ import Message
 botCommands = fromList
     [ ( "quit", \_ -> write "QUIT" ":Exiting" >> io (exitWith ExitSuccess))
     , ( "echo", \x -> privmsg $ drop 5 x                               )
+    , ( "hug",  \x -> case length (drop 4 x) == 0 of
+                        True  -> privmsg "\1ACTION hugs you.\1"
+                        False -> privmsg ("\1ACTION hugs "++(drop 4 x)++".\1"))
     , ( "fall", \_ -> privmsg "\1ACTION falls over.\1"                        ) ]
 
 server = "irc.canternet.org"
