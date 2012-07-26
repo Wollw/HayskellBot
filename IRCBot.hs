@@ -26,15 +26,16 @@ botCommands = fromList
     , ( "fall", \b _ -> privmsg b "\1ACTION falls over.\1" ) ]
 
 data IRCBot = IRCBot {
-    socket   :: Handle,
-    nickname :: String,
-    channels :: [String]
+    socket   :: IRCHandle,
+    nickname :: IRCNick,
+    channels :: [IRCChannel]
 }
 
 type IRCServer  = String
 type IRCPort    = Int
 type IRCNick    = String
 type IRCChannel = String
+type IRCHandle  = Handle
 
 -- Launch a new instance of the bot
 launch :: IRCServer -> IRCPort -> IRCNick -> [IRCChannel] -> IO ()
