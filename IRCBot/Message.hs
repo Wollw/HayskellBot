@@ -26,10 +26,12 @@ parseMessage str =
       (':':xs) -> MessagePrefixed
                     (words str !! 0)
                     (readCommand (words str !! 1))
-                    [unwords $ drop 2 (words str)]
+                    ((words $ takeWhile (/= ':') (paramString str 2)) ++ [drop 1 $ dropWhile (/= ':') (paramString str 2)])
       str      -> MessageUnprefixed
                     (readCommand (words str !! 0))
-                    [unwords $ drop 1 (words str)]
+                    ((words $ takeWhile (/= ':') (paramString str 1)) ++ [drop 1 $ dropWhile (/= ':') (paramString str 1)])
+  where
+    paramString s n = (unwords $ drop n (words str))
 
 readCommand :: String -> Command
 readCommand str =
