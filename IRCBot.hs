@@ -47,7 +47,7 @@ listen bot = forever $ do
     ping x      = "PING :" `isPrefixOf` x
     pong x      = write (socket bot) "PONG" (':' : drop 6 x)
     isConnected = (==) $ CommandNum 1
-    joinChannel = write (socket bot) "JOIN" $ ((channels bot) !! 0)
+    joinChannel = mapM_ (write (socket bot) "JOIN") $ channels bot
 
 -- Connect to the IRC network
 connect :: IRCServer -> IRCPort -> IRCNick -> [IRCChannel] -> IO IRCBot
