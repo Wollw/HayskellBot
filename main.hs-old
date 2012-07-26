@@ -14,38 +14,43 @@ import Prelude hiding (catch)
 import Message
 
 botCommands = fromList
-    [ ( "quit", \_ -> write "QUIT" ":Exiting" >> io (exitWith ExitSuccess))
-    , ( "echo", \x -> privmsg $ drop 5 x                               )
-    , ( "hug",  \x -> case length (drop 4 x) == 0 of
-                        True  -> privmsg "\1ACTION hugs you.\1"
-                        False -> privmsg ("\1ACTION hugs "++(drop 4 x)++".\1"))
-    , ( "fall", \_ -> privmsg "\1ACTION falls over.\1"                        ) ]
+    [ ( "quit", \_ _ -> write "QUIT" ":Exiting" >> io (exitWith ExitSuccess) )
+    , ( "echo", \_ s -> privmsg $ drop 5 s )
+    , ( "hug",  \c s -> case length (drop 4 s) == 0 of
+                  True  -> privmsg   "\1ACTION hugs you.\1"
+                  False -> privmsg $ "\1ACTION hugs "++(drop 4 s)++".\1" )
+    , ( "fall", \c _ -> privmsg "\1ACTION falls over.\1" ) ]
 
-server = "irc.canternet.org"
-port   = 6667
-chan   = "#HackingIsMagic"
-nick   = "HayskellBot"
+--server = "irc.canternet.org"
+--port   = 6667
+--chan   = "#HackingIsMagic"
+--nick   = "HayskellBot"
 
 -- The 'Net' monad, a wrapper over IO, carrying the bot's immutable state.
 type Net = ReaderT Bot IO
-data Bot = Bot { socket :: Handle }
+data Bot = Bot {
+    socket  :: Handle,
+    nick    :: String}
+
+main :: IO ()
+main = do start "irc.canternet.org" 6667 "#HackingIsMagic" "HayskellBot"
 
 -- Setup actions to run on start and end, and run the main loop
-main :: IO ()
-main = bracket connect disconnect loop
+start :: String -> Int -> String -> String -> IO ()
+start s p c n = bracket (connect s p c n) disconnect loop
   where
     disconnect = hClose . socket
     loop st    = catch (runReaderT run st) (const $ return ())
 
 -- Connect to the server and return the initial bot state
-connect :: IO Bot
-connect = notify $ do
-    h <- connectTo server (PortNumber (fromIntegral port))
+connect :: String -> Int -> String -> String -> IO Bot
+connect s p c n = notify $ do
+    h <- connectTo s (PortNumber (fromIntegral p))
     hSetBuffering h NoBuffering
-    return (Bot h)
+    return (Bot h c n)
   where
     notify a = bracket_
-        (printf "Connecting to %s ..." server >> hFlush stdout)
+        (printf "Connecting to %s ..." s >> hFlush stdout)
         (putStrLn "done.")
         a
 
@@ -54,18 +59,21 @@ connect = notify $ do
 run :: Net ()
 run = do
     write "NICK" nick
-    write "USER" (nick++" 0 * :hayskell bot")
+    write "USER" (nick ++ " 0 * :hayskellbot")
     asks socket >>= listen
+  where
+    botNick (Bot _ _ n) = n
+    botChan (Bot _ c _) = c
 
 -- Process each line from the server
-listen :: Handle -> Net ()
-listen h = forever $ do
+listen :: Bot -> Net ()
+listen (Bot h c n) = forever $ do
     s <- init `fmap` io (hGetLine h)
     io (putStrLn s)
     let m = parseMessage s
     if ping s then pong s
     else if isConnected $ command m then joinChannel    -- Wait for MOTD before joining
-    else if shouldEval (clean s) then eval $ drop 1 $ dropWhile (/= ' ') (clean s)
+    else if shouldEval (clean s) then eval c $ drop 1 $ dropWhile (/= ' ') (clean s)
     else return ()
   where
     forever a   = a >> forever a
@@ -73,19 +81,19 @@ listen h = forever $ do
     ping x      = "PING :" `isPrefixOf` x
     pong x      = write "PONG" (':' : drop 6 x)
     isConnected = (==) $ CommandNum 1
-    joinChannel = write "JOIN" chan
-    shouldEval  = isPrefixOf ("!"++nick++" ")
+    joinChannel = write "JOIN" c
+    shouldEval  = isPrefixOf ("!"++n++" ")
 
 -- Dispatch a command
-eval :: String -> Net ()
-eval s =
+eval :: String -> String -> Net ()
+eval c s =
     case Data.Map.lookup (takeWhile (/= ' ') s) botCommands of
-        Just x  -> x s
+        Just x  -> x c s
         Nothing -> return ()
 
 -- Send a privmsg to the server we're currently connected to
-privmsg :: String -> Net ()
-privmsg s = write "PRIVMSG" (chan ++ " :" ++ s)
+privmsg :: String -> String -> Net ()
+privmsg c s = write "PRIVMSG" (c ++ " :" ++ s)
 
 -- Send a message out to the server we're currently connected to
 write :: String -> String -> Net ()

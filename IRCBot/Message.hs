@@ -1,4 +1,4 @@
-module Message where
+module IRCBot.Message where
 import Safe
 
 data Message =
