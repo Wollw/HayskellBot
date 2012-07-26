@@ -39,7 +39,7 @@ listen bot = forever $ do
     liftIO (putStrLn s)
     let m = parseMessage s
     if ping s then pong s
-    else if isConnected $ command m then joinChannel
+    else if isConnected $ command m then joinChannels
     else return ()
   where
     forever a = a >> forever a
@@ -47,7 +47,7 @@ listen bot = forever $ do
     ping x      = "PING :" `isPrefixOf` x
     pong x      = write (socket bot) "PONG" (':' : drop 6 x)
     isConnected = (==) $ CommandNum 1
-    joinChannel = mapM_ (write (socket bot) "JOIN") $ channels bot
+    joinChannels = mapM_ (write (socket bot) "JOIN") $ channels bot
 
 -- Connect to the IRC network
 connect :: IRCServer -> IRCPort -> IRCNick -> [IRCChannel] -> IO IRCBot
