@@ -36,7 +36,3 @@ readCommand str =
     case readMay str of
       Nothing -> CommandStr str
       Just n  -> CommandNum n
-
-messageCommand :: Message -> Command
-messageCommand (MessagePrefixed _ c _) = c
-messageCommand (MessageUnprefixed c _) = c
