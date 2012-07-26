@@ -63,7 +63,7 @@ listen bot = forever $ do
     pong x      = write bot "PONG" (':' : drop 6 x)
     isConnected = (==) $ CommandNum 1
     joinChannels = mapM_ (write bot "JOIN") $ channels bot
-    shouldEval  = isPrefixOf ("!"++(nickname bot)++" ")
+    shouldEval  = isPrefixOf ((nickname bot)++": ")
 
 -- Connect to the IRC network
 connect :: IRCServer -> IRCPort -> IRCNick -> [IRCChannel] -> IO IRCBot
