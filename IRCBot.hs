@@ -14,6 +14,8 @@ import Text.Printf
 import IRCBot.Message
 
 
+-- Commands that bot will recognize. Type for lambdas is
+--      IRCBot -> Message -> String -> IO ()
 botCommands = fromList
     [ ( "quit", \b _ _ -> write b "QUIT" ":Exiting" >> liftIO (exitWith ExitSuccess) )
     , ( "explode", \b m _ -> do
